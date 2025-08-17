@@ -143,37 +143,40 @@ const db = firebase.database();
 
 // --- Current user ---
 const OWNER_ID = '4811042012';
-let currentUserRole = null; // 'owner' or 'user'
+let currentUserRole = null;
 
 // --- DATABASE FUNCTIONS ---
-async function loadProducts(){
+async function loadProducts() {
   const snapshot = await db.ref('products').get();
   return snapshot.exists() ? snapshot.val() : {};
 }
-async function saveProduct(product){
+async function saveProduct(product) {
   const newRef = db.ref('products').push();
   await newRef.set(product);
 }
-async function removeProduct(key){
+async function removeProduct(key) {
   await db.ref('products/' + key).remove();
 }
 
-async function loadUsers(){
+async function loadUsers() {
   const snapshot = await db.ref('users').get();
   return snapshot.exists() ? snapshot.val() : {};
 }
-async function saveUser(id, perm){
-  await db.ref('users/' + id).set({perm});
+async function saveUser(id, perm) {
+  await db.ref('users/' + id).set({ perm });
 }
-async function removeUser(id){
+async function removeUser(id) {
   await db.ref('users/' + id).remove();
 }
 
 // --- RENDER FUNCTIONS ---
-async function renderProducts(){
+async function renderProducts() {
   const products = await loadProducts();
-  const grid = document.getElementById('productsGrid'); grid.innerHTML='';
-  if(!products || Object.keys(products).length===0){grid.innerHTML='<div class="card">No products yet.</div>'; return}
+  const grid = document.getElementById('productsGrid'); 
+  grid.innerHTML = '';
+  if(!products || Object.keys(products).length===0) {
+    grid.innerHTML = '<div class="card">No products yet.</div>'; return;
+  }
   for(const key in products){
     const p = products[key];
     const c = document.createElement('div'); c.className='card';
@@ -185,17 +188,20 @@ async function renderProducts(){
   }
 }
 
-async function renderOwnerProductList(){
+async function renderOwnerProductList() {
   const products = await loadProducts();
-  const list = document.getElementById('ownerProductList'); list.innerHTML='';
-  if(!products || Object.keys(products).length===0){list.innerHTML='<div class="card">No products yet.</div>'; return}
+  const list = document.getElementById('ownerProductList'); 
+  list.innerHTML = '';
+  if(!products || Object.keys(products).length===0) {
+    list.innerHTML = '<div class="card">No products yet.</div>'; return;
+  }
   for(const key in products){
     const p = products[key];
     const c = document.createElement('div'); c.className='card';
     c.innerHTML=`<div><strong>${p.title}</strong></div>
       <div class="price">$${p.price.toFixed(2)}</div>
       <div class="muted">${p.desc||''}</div>
-      <div class="actions"><button class="btn danger" data-key='${key}'>Remove</button></div>`;
+      <div class="actions"><button class='btn danger' data-key='${key}'>Remove</button></div>`;
     list.appendChild(c);
   }
   list.querySelectorAll('.btn.danger').forEach(btn=>{
@@ -209,10 +215,11 @@ async function renderOwnerProductList(){
 
 async function renderUsers(){
   const users = await loadUsers();
-  const userListDiv = document.getElementById('userList'); userListDiv.innerHTML='';
+  const userListDiv = document.getElementById('userList'); 
+  userListDiv.innerHTML = '';
   for(const id in users){
-    const div=document.createElement('div');
-    div.textContent=`ID: ${id}, Permission: ${users[id]?.perm || 'none'}`;
+    const div = document.createElement('div');
+    div.textContent = `ID: ${id}, Permission: ${users[id]?.perm || 'none'}`;
     userListDiv.appendChild(div);
   }
 }
@@ -283,7 +290,6 @@ function openLogin(){loginModal.style.display='flex'}
 function closeLogin(){loginModal.style.display='none'}
 function openUserLogin(){userLoginModal.style.display='flex'}
 function closeUserLogin(){userLoginModal.style.display='none'}
-
 function logout(){
   currentUserRole=null;
   welcomeSection.style.display='block';
@@ -374,6 +380,5 @@ userLogoutBtn.addEventListener('click', logout);
 // --- INITIAL LOAD ---
 renderProducts();
 </script>
-
 </body>
 </html>
