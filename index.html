@@ -50,7 +50,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--accent-2);padding:20
 <main id="mainContent">
 <section id="welcomeSection">
 <h2>Welcome to Harringtons Reselling</h2>
-<p class="muted">Striving to start a buisness of my own, selling lego at a semi cheap price and also other stuff! stay tuned</p>
+<p class="muted">Striving to start a business of my own, selling Lego at a semi cheap price and also other stuff! stay tuned</p>
 </section>
 
 <section id="productsSection">
@@ -95,11 +95,9 @@ footer{background:var(--bg-soft);border-top:1px solid var(--accent-2);padding:20
 </section>
 
 <section id="businessInfoSection" class="dashboard">
-<h2>Business Information (Updating every sunday around 12 pm)</h2>
-<p>Selling Rare lego (May also sell some pc stuff) </p>
-<p>Looking to find reputable sources, camberwell market, garage sales etc, 120 avalible to spend. Hoping it will take  3 weeks to finalise the buisnesss and get it running</p>
-<p>Were im going to find: Garage sales, Camberwell market and legitimate resellers</p>
-<p>Buisness plan: Start off with 120 dollars, go to garage sales and order some lego online, if i find a reputable source i will start selling lego provided from them, my time line is Week 1 (14/8/2025) looking to sell maybe 1 lego peice, week 2, looking for about $100 in profit, week 3, learning how shipping works, how to get good deals and solid customers. hopefully $100 in revenue, week 4, expanding sales, instead of selling 1 or 2 lego peices ill try to sell 3-4 and gain $200 in profit, week 5, bank plan, set some money up for savings, buisness spendings and every day spender, after this i will be more orginised and ready to sell with alot of profit, also willing to take some risks. week 6, if my buisness if running well enough i might put up advertisments in the sign of posters around kew, week 7, might start social media advertisment is the buisness is running ok, if not i will try to find more ways to sell, earn trust, customers and revenue. Start of next year, hoping to have a booming buisness and earn maybe $1000 per weekend in sales, keep on expanding after that</p>
+<h2>Business Information (Updating every Sunday around 12 pm)</h2>
+<p>Selling Rare Lego (May also sell some PC stuff)</p>
+<p>Looking to find reputable sources, Camberwell market, garage sales etc, $120 available to spend. Hoping it will take 3 weeks to finalise the business and get it running.</p>
 <button class="btn logoutBtn" id="infoBackBtn">Back</button>
 </section>
 </main>
@@ -130,7 +128,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--accent-2);padding:20
 </div>
 
 <script>
-// Firebase config
+// --- Firebase config ---
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -143,35 +141,35 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Current user
-const OWNER_ID='4811042012';
+// --- Current user ---
+const OWNER_ID = '4811042012';
 let currentUserRole = null; // 'owner' or 'user'
 
 // --- DATABASE FUNCTIONS ---
-
 async function loadProducts(){
   const snapshot = await db.ref('products').get();
-  return snapshot.exists()?snapshot.val():[];
+  return snapshot.exists() ? snapshot.val() : {};
 }
-function saveProduct(product){
+async function saveProduct(product){
   const newRef = db.ref('products').push();
-  newRef.set(product);
+  await newRef.set(product);
 }
-async function removeProduct(index){
-  const products = await loadProducts();
-  const keys = Object.keys(products);
-  if(keys[index]) db.ref('products/' + keys[index]).remove();
+async function removeProduct(key){
+  await db.ref('products/' + key).remove();
 }
 
 async function loadUsers(){
   const snapshot = await db.ref('users').get();
-  return snapshot.exists()?snapshot.val():{};
+  return snapshot.exists() ? snapshot.val() : {};
 }
-function saveUser(id, perm){db.ref('users/'+id).set({perm})}
-function removeUser(id){db.ref('users/'+id).remove()}
+async function saveUser(id, perm){
+  await db.ref('users/' + id).set({perm});
+}
+async function removeUser(id){
+  await db.ref('users/' + id).remove();
+}
 
 // --- RENDER FUNCTIONS ---
-
 async function renderProducts(){
   const products = await loadProducts();
   const grid = document.getElementById('productsGrid'); grid.innerHTML='';
@@ -189,125 +187,102 @@ async function renderProducts(){
 
 async function renderOwnerProductList(){
   const products = await loadProducts();
-  const ownerProductList=document.getElementById('ownerProductList'); ownerProductList.innerHTML='';
-  if(!products || Object.keys(products).length===0){ownerProductList.innerHTML='<div class="card">No products yet.</div>'; return}
-  const keys = Object.keys(products);
-  keys.forEach((key,i)=>{
+  const list = document.getElementById('ownerProductList'); list.innerHTML='';
+  if(!products || Object.keys(products).length===0){list.innerHTML='<div class="card">No products yet.</div>'; return}
+  for(const key in products){
     const p = products[key];
     const c = document.createElement('div'); c.className='card';
     c.innerHTML=`<div><strong>${p.title}</strong></div>
       <div class="price">$${p.price.toFixed(2)}</div>
       <div class="muted">${p.desc||''}</div>
-      <div class="actions"><button class='btn danger' data-key='${key}'>Remove</button></div>`;
-    ownerProductList.appendChild(c)
-  });
-  ownerProductList.querySelectorAll('.btn.danger').forEach(btn=>{
-    btn.addEventListener('click',function(){
+      <div class="actions"><button class="btn danger" data-key='${key}'>Remove</button></div>`;
+    list.appendChild(c);
+  }
+  list.querySelectorAll('.btn.danger').forEach(btn=>{
+    btn.addEventListener('click', async function(){
       const key = this.dataset.key;
-      db.ref('products/' + key).remove().then(()=>{renderProducts(); renderOwnerProductList();});
-    })
-  })
+      await removeProduct(key);
+      await renderProducts(); await renderOwnerProductList();
+    });
+  });
 }
 
 async function renderUsers(){
   const users = await loadUsers();
-  const userListDiv=document.getElementById('userList'); userListDiv.innerHTML='';
-  for(const id in users){const div=document.createElement('div'); div.textContent=`ID: ${id}, Permission: ${users[id]?.perm || 'none'}`; userListDiv.appendChild(div)}
+  const userListDiv = document.getElementById('userList'); userListDiv.innerHTML='';
+  for(const id in users){
+    const div=document.createElement('div');
+    div.textContent=`ID: ${id}, Permission: ${users[id]?.perm || 'none'}`;
+    userListDiv.appendChild(div);
+  }
 }
 
 async function renderUserActions(user){
   if(!user || !user.perm) return;
-  const userActions=document.getElementById('userActions'); userActions.innerHTML='';
+  const userActions = document.getElementById('userActions'); userActions.innerHTML='';
 
   if(user.perm.includes('add')){
-    userActions.innerHTML+=`<h3>Add Product</h3>
+    userActions.innerHTML += `<h3>Add Product</h3>
       <input id='userProductTitle' placeholder='Title'>
       <input id='userProductPrice' type='number' placeholder='Price'>
       <input id='userProductDesc' placeholder='Description'>
       <input id='userProductImg' placeholder='Image URL'>
       <button class='btn' id='userAddProductBtn'>Add Product</button>`;
     document.getElementById('userAddProductBtn').addEventListener('click', async ()=>{
-      const title=document.getElementById('userProductTitle').value,
-      price=parseFloat(document.getElementById('userProductPrice').value),
-      desc=document.getElementById('userProductDesc').value,
-      img=document.getElementById('userProductImg').value;
-      saveProduct({title,price,desc,img});
+      const title = document.getElementById('userProductTitle').value;
+      const price = parseFloat(document.getElementById('userProductPrice').value);
+      const desc = document.getElementById('userProductDesc').value;
+      const img = document.getElementById('userProductImg').value;
+      await saveProduct({title,price,desc,img});
       await renderProducts(); await renderOwnerProductList(); await renderUserActions(user);
-    })
+    });
   }
 
   if(user.perm.includes('remove')){
-    userActions.innerHTML+=`<h3>Remove Products</h3><div id='userRemoveList' class='grid'></div>`;
-    const products = await loadProducts(); const userRemoveList=document.getElementById('userRemoveList');
-    const keys = Object.keys(products);
-    keys.forEach((key,i)=>{
+    userActions.innerHTML += `<h3>Remove Products</h3><div id='userRemoveList' class='grid'></div>`;
+    const products = await loadProducts(); const removeList = document.getElementById('userRemoveList');
+    for(const key in products){
       const p = products[key];
       const c = document.createElement('div'); c.className='card';
       c.innerHTML=`<div><strong>${p.title}</strong></div>
         <div class='price'>$${p.price.toFixed(2)}</div>
         <div class='muted'>${p.desc||''}</div>
         <div class='actions'><button class='btn danger' data-key='${key}'>Remove</button></div>`;
-      userRemoveList.appendChild(c);
-    });
-    userRemoveList.querySelectorAll('.btn.danger').forEach(btn=>{
-      btn.addEventListener('click',function(){
+      removeList.appendChild(c);
+    }
+    removeList.querySelectorAll('.btn.danger').forEach(btn=>{
+      btn.addEventListener('click', async function(){
         const key = this.dataset.key;
-        db.ref('products/' + key).remove().then(()=>{renderProducts(); renderOwnerProductList(); renderUserActions(user);});
-      })
-    })
+        await removeProduct(key);
+        await renderProducts(); await renderOwnerProductList(); await renderUserActions(user);
+      });
+    });
   }
 }
 
 // --- LOGIN / LOGOUT ---
-const ownerLoginBtn=document.getElementById('ownerLoginBtn'),
-userLoginBtn=document.getElementById('userLoginBtn'),
-businessInfoBtn=document.getElementById('businessInfoBtn'),
-ownerCancelBtn=document.getElementById('ownerCancelBtn'),
-userCancelBtn=document.getElementById('userCancelBtn'),
-ownerSubmitBtn=document.getElementById('ownerSubmitBtn'),
-userSubmitBtn=document.getElementById('userSubmitBtn'),
-loginModal=document.getElementById('loginModal'),
-userLoginModal=document.getElementById('userLoginModal'),
-welcomeSection=document.getElementById('welcomeSection'),
-productsSection=document.getElementById('productsSection'),
-ownerDashboard=document.getElementById('ownerDashboard'),
-userDashboard=document.getElementById('userDashboard'),
-businessInfoSection=document.getElementById('businessInfoSection'),
-ownerLogoutBtn=document.getElementById('ownerLogoutBtn'),
-userLogoutBtn=document.getElementById('userLogoutBtn'),
-infoBackBtn=document.getElementById('infoBackBtn');
+const ownerLoginBtn = document.getElementById('ownerLoginBtn');
+const userLoginBtn = document.getElementById('userLoginBtn');
+const businessInfoBtn = document.getElementById('businessInfoBtn');
+const ownerCancelBtn = document.getElementById('ownerCancelBtn');
+const userCancelBtn = document.getElementById('userCancelBtn');
+const ownerSubmitBtn = document.getElementById('ownerSubmitBtn');
+const userSubmitBtn = document.getElementById('userSubmitBtn');
+const loginModal = document.getElementById('loginModal');
+const userLoginModal = document.getElementById('userLoginModal');
+const welcomeSection = document.getElementById('welcomeSection');
+const productsSection = document.getElementById('productsSection');
+const ownerDashboard = document.getElementById('ownerDashboard');
+const userDashboard = document.getElementById('userDashboard');
+const businessInfoSection = document.getElementById('businessInfoSection');
+const ownerLogoutBtn = document.getElementById('ownerLogoutBtn');
+const userLogoutBtn = document.getElementById('userLogoutBtn');
+const infoBackBtn = document.getElementById('infoBackBtn');
 
 function openLogin(){loginModal.style.display='flex'}
 function closeLogin(){loginModal.style.display='none'}
 function openUserLogin(){userLoginModal.style.display='flex'}
 function closeUserLogin(){userLoginModal.style.display='none'}
-
-function checkLogin(){
-  const val=document.getElementById('ownerIdInput').value;
-  if(val===OWNER_ID){
-    currentUserRole='owner';
-    closeLogin();
-    welcomeSection.style.display='none';
-    productsSection.style.display='none';
-    ownerDashboard.style.display='block';
-    businessInfoBtn.style.display='inline-block';
-    renderOwnerProductList(); renderUsers();
-  } else alert('Invalid ID')
-}
-
-async function checkUserLogin(){
-  const id=document.getElementById('userIdInput').value;
-  const users = await loadUsers();
-  if(users[id]){
-    currentUserRole='user';
-    closeUserLogin();
-    welcomeSection.style.display='none';
-    productsSection.style.display='none';
-    userDashboard.style.display='block';
-    businessInfoBtn.style.display='inline-block';
-    renderUserActions(users[id]);
-  } else alert('Invalid User ID')
-}
 
 function logout(){
   currentUserRole=null;
@@ -319,51 +294,82 @@ function logout(){
   businessInfoBtn.style.display='none';
 }
 
-// --- EVENT LISTENERS ---
-ownerLoginBtn.addEventListener('click',openLogin);
-userLoginBtn.addEventListener('click',openUserLogin);
-ownerCancelBtn.addEventListener('click',closeLogin);
-userCancelBtn.addEventListener('click',closeUserLogin);
-ownerSubmitBtn.addEventListener('click',checkLogin);
-userSubmitBtn.addEventListener('click',checkUserLogin);
+ownerLoginBtn.addEventListener('click', openLogin);
+userLoginBtn.addEventListener('click', openUserLogin);
+ownerCancelBtn.addEventListener('click', closeLogin);
+userCancelBtn.addEventListener('click', closeUserLogin);
 
-businessInfoBtn.addEventListener('click',()=>{
-  businessInfoSection.style.display='block';
-  ownerDashboard.style.display='none';
-  userDashboard.style.display='none';
+ownerSubmitBtn.addEventListener('click', ()=>{
+  const val = document.getElementById('ownerIdInput').value;
+  if(val===OWNER_ID){
+    currentUserRole='owner';
+    closeLogin();
+    welcomeSection.style.display='none';
+    productsSection.style.display='none';
+    ownerDashboard.style.display='block';
+    businessInfoBtn.style.display='inline-block';
+    renderOwnerProductList(); renderUsers();
+  } else alert('Invalid ID');
 });
 
-infoBackBtn.addEventListener('click',()=>{
+userSubmitBtn.addEventListener('click', async ()=>{
+  const id = document.getElementById('userIdInput').value;
+  const users = await loadUsers();
+  if(users[id]){
+    currentUserRole='user';
+    closeUserLogin();
+    welcomeSection.style.display='none';
+    productsSection.style.display='none';
+    userDashboard.style.display='block';
+    businessInfoBtn.style.display='inline-block';
+    await renderUserActions(users[id]);
+  } else alert('Invalid User ID');
+});
+
+businessInfoBtn.addEventListener('click', ()=>{
+  businessInfoSection.style.display='block';
+  if(currentUserRole==='owner') ownerDashboard.style.display='none';
+  else if(currentUserRole==='user') userDashboard.style.display='none';
+});
+
+infoBackBtn.addEventListener('click', ()=>{
   businessInfoSection.style.display='none';
   if(currentUserRole==='owner') ownerDashboard.style.display='block';
   else if(currentUserRole==='user') userDashboard.style.display='block';
 });
 
-// Add Product
-document.getElementById('addProductBtn').addEventListener('click',()=>{
-  const title=document.getElementById('ownerProductTitle').value,
-        price=parseFloat(document.getElementById('ownerProductPrice').value),
-        desc=document.getElementById('ownerProductDesc').value,
-        img=document.getElementById('ownerProductImg').value;
-  saveProduct({title,price,desc,img});
-  renderProducts(); renderOwnerProductList();
+// Add Product (Owner)
+document.getElementById('addProductBtn').addEventListener('click', async ()=>{
+  const title = document.getElementById('ownerProductTitle').value;
+  const price = parseFloat(document.getElementById('ownerProductPrice').value);
+  const desc = document.getElementById('ownerProductDesc').value;
+  const img = document.getElementById('ownerProductImg').value;
+  await saveProduct({title,price,desc,img});
+  await renderProducts(); await renderOwnerProductList();
 });
 
 // Add User
-document.getElementById('addUserBtn').addEventListener('click',()=>{
-  const id=document.getElementById('newUserId').value,
-        perm=document.getElementById('newUserPerm').value;
-  if(id.trim() && perm){ saveUser(id,perm); document.getElementById('newUserId').value=''; document.getElementById('newUserPerm').value='add'; renderUsers(); }
+document.getElementById('addUserBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('newUserId').value.trim();
+  const perm = document.getElementById('newUserPerm').value;
+  if(id && perm){
+    await saveUser(id,perm);
+    document.getElementById('newUserId').value=''; document.getElementById('newUserPerm').value='add';
+    await renderUsers();
+  }
 });
 
 // Remove User
-document.getElementById('removeUserBtn').addEventListener('click',()=>{
-  const id=document.getElementById('removeUserId').value;
-  removeUser(id).then(()=>{renderUsers(); document.getElementById('removeUserId').value='';});
+document.getElementById('removeUserBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('removeUserId').value.trim();
+  if(!id) return alert('Enter User ID');
+  await removeUser(id);
+  document.getElementById('removeUserId').value='';
+  await renderUsers();
 });
 
-ownerLogoutBtn.addEventListener('click',logout);
-userLogoutBtn.addEventListener('click',logout);
+ownerLogoutBtn.addEventListener('click', logout);
+userLogoutBtn.addEventListener('click', logout);
 
 // --- INITIAL LOAD ---
 renderProducts();
