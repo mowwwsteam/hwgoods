@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Harringtons Reselling</title>
+  <meta name="description" content="Harringtons Reselling – browse products, and (with an ID) manage inventory and accounts." />
+  <style>
+    :root{
+      --bg:#ffffff;
+      --bg-soft:#fff7f9; /* cream pink */
+      --accent:#ffccd6;  /* soft pink */
+      --accent-2:#ffd9e0; /* lighter pink */
+      --text:#222222;
+      --muted:#666666;
+      --ring:#ff99ad;
+      --ok:#12a150;
+      --warn:#d97706;
+      --err:#c81e1e;
+      --radius:18px;
+      --shadow:0 8px 24px rgba(255, 160, 180, 0.25);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text); background:linear-gradient(180deg,var(--bg), var(--bg-soft));
+    }
+    header{
+      position:sticky; top:0; z-index:30; backdrop-filter:saturate(1.2) blur(8px);
+      background:rgba(255,255,255,0.8); border-bottom:1px solid var(--accent-2);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:18px 18px;}
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{width:40px; height:40px; border-radius:50%; background:radial-gradient(circle at 30% 30%, var(--accent), var(--accent-2)); box-shadow:var(--shadow)}
+    h1{font-size:1.4rem; margin:0}
+
+    .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;}
+    .searchbar{display:flex; gap:8px; align-items:center; width:100%; max-width:520px; background:#fff; border:1px solid var(--accent-2); border-radius:var(--radius); padding:8px 10px; box-shadow:var(--shadow)}
+    .searchbar input{border:none; outline:none; flex:1; font-size:1rem;}
+    .btn{appearance:none; border:none; border-radius:14px; padding:10px 14px; font-weight:600; cursor:pointer; box-shadow:var(--shadow); background:var(--accent);}
+    .btn:hover{filter:brightness(0.98)}
+    .btn.secondary{background:#fff; border:1px solid var(--accent-2)}
+    .btn.danger{background:#ffe5e9; color:#aa0f2c; border:1px solid #ffd1db}
+    .pill{padding:6px 10px; border-radius:999px; font-size:.9rem; background:var(--bg-soft); border:1px solid var(--accent-2)}
+
+    main{max-width:1100px; margin:20px auto; padding:0 18px 80px}
+    .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:16px}
+    .card{background:white; border:1px solid var(--accent-2); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; display:flex; flex-direction:column; gap:10px}
+    .card img{width:100%; height:150px; object-fit:cover; border-radius:12px; background:var(--bg-soft); border:1px dashed var(--accent-2)}
+    .price{font-weight:800}
+    .muted{color:var(--muted)}
+
+    .admin-bar{position:sticky; bottom:0; left:0; right:0; background:rgba(255,255,255,0.75); backdrop-filter:blur(10px); border-top:1px solid var(--accent-2); padding:10px;}
+    .admin-actions{display:flex; gap:10px; flex-wrap:wrap}
+
+    .panels{display:grid; grid-template-columns:1fr; gap:16px; margin-top:16px}
+    .panel{background:white; border:1px solid var(--accent-2); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px}
+    .panel h3{margin:0 0 10px 0}
+    form{display:grid; gap:10px}
+    label{font-weight:600;}
+    input[type="text"], input[type="number"], input[type="url"], textarea{width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--accent-2); outline:none}
+    input:focus, textarea:focus{border-color:var(--ring); box-shadow:0 0 0 4px rgba(255, 153, 173, .15)}
+    table{width:100%; border-collapse:separate; border-spacing:0}
+    th, td{padding:10px; border-bottom:1px solid var(--accent-2); text-align:left}
+    th{background:var(--bg-soft)}
+    .flex{display:flex; gap:10px; align-items:center}
+    .right{margin-left:auto}
+
+    .login-modal{position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center;}
+    .login-card{width:min(420px, 92vw); background:#fff; border:1px solid var(--accent-2); border-radius:22px; padding:18px; box-shadow:var(--shadow)}
+    .x{background:transparent; border:none; font-size:20px; cursor:pointer}
+    .notice{padding:10px; border:1px solid var(--accent-2); background:var(--bg-soft); border-radius:12px}
+    .tag{display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--accent-2); background:var(--bg-soft); font-size:.8rem}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap toolbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Harringtons Reselling</h1>
+          <div class="muted" style="font-size:.9rem">Quality finds, smooth flips ♡</div>
+        </div>
+      </div>
+      <div class="flex right">
+        <div class="searchbar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35" stroke="#333" stroke-width="1.5" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="#333" stroke-width="1.5"/></svg>
+          <input id="searchInput" type="text" placeholder="Search products…" />
+        </div>
+        <button class="btn secondary" id="ownerLoginBtn" title="Owner / Staff login">Owner Login</button>
+        <button class="btn" id="userLoginBtn" title="User login with ID">User Login</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="notice">
+        Anyone can browse products below. If you have an ID, use the login buttons to access management features. Default Owner ID: <strong>4811042012</strong> (changeable via code or by adding a new owner account).</div>
+    </section>
+
+    <h2 style="margin:18px 0 8px">Products</h2>
+    <div id="productsGrid" class="grid" aria-live="polite"></div>
+
+    <section id="adminArea" style="display:none">
+      <div class="admin-bar">
+        <div class="wrap">
+          <div class="admin-actions">
+            <span class="pill">Logged in as <strong id="whoami">—</strong> <span class="tag" id="roleTag"></span></span>
+            <button class="btn secondary" id="logoutBtn">Log out</button>
+            <span class="right"></span>
+            <button class="btn" id="toggleProducts">Manage Products</button>
+            <button class="btn" id="toggleUsers">Manage Accounts</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panels wrap">
+        <div id="productsPanel" class="panel" style="display:none">
+          <h3>Products Manager</h3>
+          <form id="productForm">
+            <div class="flex" style="flex-wrap:wrap; gap:12px">
+              <div style="flex:1; min-width:240px">
+                <label>Title</label>
+                <input type="text" id="pTitle" required placeholder="eg. Nike Air Max 270" />
+              </div>
+              <div style="width:160px">
+                <label>Price ($)</label>
+                <input type="number" id="pPrice" min="0" step="0.01" required />
+              </div>
+              <div style="flex:1; min-width:220px">
+                <label>Image URL</label>
+                <input type="url" id="pImg" placeholder="https://…" />
+              </div>
+            </div>
+            <div>
+              <label>Description</label>
+              <textarea id="pDesc" rows="3" placeholder="Short details, condition, size, etc."></textarea>
+            </div>
+            <div class="flex">
+              <input type="hidden" id="pId" />
+              <button class="btn" type="submit">Save Product</button>
+              <button class="btn secondary" type="button" id="resetForm">Clear</button>
+            </div>
+          </form>
+          <h4 style="margin:14px 0 6px">Inventory</h4>
+          <table id="productsTable">
+            <thead><tr><th>Title</th><th>Price</th><th>Description</th><th>Preview</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="usersPanel" class="panel" style="display:none">
+          <h3>Accounts & Permissions</h3>
+          <form id="userForm">
+            <div class="flex" style="flex-wrap:wrap; gap:12px">
+              <div style="min-width:200px; flex:1">
+                <label>Account ID</label>
+                <input type="text" id="uId" required placeholder="eg. 123456" />
+              </div>
+              <div style="min-width:200px; flex:1">
+                <label>Role (label)</label>
+                <input type="text" id="uRole" placeholder="eg. staff, lister" />
+              </div>
+            </div>
+            <div class="flex" style="flex-wrap:wrap; gap:12px">
+              <label><input type="checkbox" id="permAdd"/> Can Add</label>
+              <label><input type="checkbox" id="permEdit"/> Can Edit</label>
+              <label><input type="checkbox" id="permRemove"/> Can Remove</label>
+              <label><input type="checkbox" id="permManageUsers"/> Can Manage Users</label>
+            </div>
+            <div class="flex">
+              <button class="btn" type="submit">Save Account</button>
+              <button class="btn secondary" type="button" id="resetUserForm">Clear</button>
+            </div>
+          </form>
+
+          <h4 style="margin:14px 0 6px">Existing Accounts</h4>
+          <table id="usersTable">
+            <thead><tr><th>ID</th><th>Role</th><th>Permissions</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="notice" style="margin-top:10px">Tip: Create another account with full permissions as a backup. Consider changing the default Owner ID and removing it once you're set.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Login Modal (reused for Owner & User) -->
+  <div class="login-modal" id="loginModal" aria-hidden="true">
+    <div class="login-card">
+      <div class="flex" style="justify-content:space-between; align-items:center">
+        <h3 style="margin:0" id="loginTitle">Login</h3>
+        <button class="x" id="closeLogin" aria-label="Close">✕</button>
+      </div>
+      <div style="height:10px"></div>
+      <form id="loginForm">
+        <label for="loginId">Enter your ID</label>
+        <input id="loginId" type="text" placeholder="e.g. 4811042012" required />
+        <div class="flex" style="margin-top:8px; align-items:center; gap:8px">
+          <button class="btn" type="submit">Log in</button>
+          <span class="muted">IDs are stored locally in your browser.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------
+    // Simple in-browser data layer
+    // ----------------------------
+    const LS_KEYS = {
+      products: 'hr_products',
+      accounts: 'hr_accounts',
+      current: 'hr_current_user'
+    };
+
+    const DEFAULT_OWNER_ID = '4811042012';
+
+    function loadProducts(){
+      try { return JSON.parse(localStorage.getItem(LS_KEYS.products)) || []; } catch(e){ return []; }
+    }
+    function saveProducts(items){
+      localStorage.setItem(LS_KEYS.products, JSON.stringify(items));
+    }
+    function loadAccounts(){
+      let acc = {};
+      try { acc = JSON.parse(localStorage.getItem(LS_KEYS.accounts)) || {}; } catch(e){ acc = {}; }
+      // Ensure default owner exists
+      if(!acc[DEFAULT_OWNER_ID]){
+        acc[DEFAULT_OWNER_ID] = { role: 'owner', perms: { add:true, edit:true, remove:true, manageUsers:true } };
+        localStorage.setItem(LS_KEYS.accounts, JSON.stringify(acc));
+      }
+      return acc;
+    }
+    function saveAccounts(acc){
+      localStorage.setItem(LS_KEYS.accounts, JSON.stringify(acc));
+    }
+    function getCurrent(){
+      try { return JSON.parse(localStorage.getItem(LS_KEYS.current)) || null; } catch(e){ return null; }
+    }
+    function setCurrent(id){
+      if(!id){ localStorage.removeItem(LS_KEYS.current); return; }
+      const acc = loadAccounts();
+      if(acc[id]) localStorage.setItem(LS_KEYS.current, JSON.stringify({ id, ...acc[id] }));
+    }
+
+    // ----------------------------
+    // UI helpers
+    // ----------------------------
+    const $ = s=>document.querySelector(s);
+    const $$ = s=>document.querySelectorAll(s);
+
+    function money(n){
+      const v = Number(n||0);
+      return isNaN(v) ? '$0.00' : `$${v.toFixed(2)}`;
+    }
+
+    function notify(msg){
+      // Lightweight toast
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.position='fixed'; t.style.bottom='20px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
+      t.style.background='white'; t.style.border='1px solid var(--accent-2)'; t.style.boxShadow='var(--shadow)';
+      t.style.padding='10px 14px'; t.style.borderRadius='12px'; t.style.zIndex='99';
+      document.body.appendChild(t);
+      setTimeout(()=>{ t.remove(); }, 2400);
+    }
+
+    // ----------------------------
+    // Rendering
+    // ----------------------------
+    function renderProducts(list = loadProducts()){
+      const q = $('#searchInput').value.trim().toLowerCase();
+      const filtered = !q ? list : list.filter(p => `${p.title} ${p.desc}`.toLowerCase().includes(q));
+      const grid = $('#productsGrid');
+      grid.innerHTML = '';
+      if(filtered.length === 0){
+        grid.innerHTML = `<div class="card" style="grid-column:1/-1">No products yet. ${getCurrent() ? 'Add some in the manager below.' : 'Owner can add items via login.'}</div>`;
+        return;
+      }
+      filtered.forEach(p => {
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = `
+          <img src="${p.img||''}" alt="${p.title}" onerror="this.src='data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'250\'><rect width=\'100%\' height=\'100%\' fill=\'#fff7f9'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'#d7889a\' font-family=\'Arial\' font-size=\'16\'>No image</text></svg>)'}'">
+          <div style="display:flex; gap:8px; align-items:baseline; justify-content:space-between">
+            <div style="font-weight:700">${p.title}</div>
+            <div class="price">${money(p.price)}</div>
+          </div>
+          <div class="muted" style="min-height:40px">${p.desc||''}</div>
+        `;
+        grid.appendChild(c);
+      });
+    }
+
+    function renderProductsTable(){
+      const tbody = document.querySelector('#productsTable tbody');
+      const items = loadProducts();
+      tbody.innerHTML = '';
+      items.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.title}</td>
+          <td>${money(p.price)}</td>
+          <td class="muted">${p.desc||''}</td>
+          <td><img src="${p.img||''}" alt="" style="width:70px;height:45px;object-fit:cover;border-radius:8px;border:1px solid var(--accent-2)" onerror="this.style.opacity=.3; this.alt='no img';"></td>
+          <td>
+            <button class="btn secondary" data-edit="${p.id}">Edit</button>
+            <button class="btn danger" data-del="${p.id}">Remove</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      // wire actions
+      tbody.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=> startEditProduct(b.dataset.edit)));
+      tbody.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=> removeProduct(b.dataset.del)));
+    }
+
+    function renderUsersTable(){
+      const tbody = document.querySelector('#usersTable tbody');
+      const acc = loadAccounts();
+      tbody.innerHTML = '';
+      Object.entries(acc).forEach(([id, info])=>{
+        const permsTxt = Object.entries(info.perms||{}).filter(([,v])=>v).map(([k])=>k).join(', ') || '—';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${id}</td>
+          <td>${info.role||'—'}</td>
+          <td>${permsTxt}</td>
+          <td>
+            <button class="btn secondary" data-edit-user="${id}">Edit</button>
+            <button class="btn danger" data-del-user="${id}">Remove</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('[data-edit-user]').forEach(b=>b.addEventListener('click',()=> startEditUser(b.dataset.editUser)));
+      tbody.querySelectorAll('[data-del-user]').forEach(b=>b.addEventListener('click',()=> removeUser(b.dataset.delUser)));
+    }
+
+    function showPanel(which){
+      $('#productsPanel').style.display = which==='products' ? '' : 'none';
+      $('#usersPanel').style.display = which==='users' ? '' : 'none';
+    }
+
+    function updateAdminUI(){
+      const me = getCurrent();
+      const admin = $('#adminArea');
+      if(!me){ admin.style.display='none'; return; }
+      admin.style.display='';
+      $('#whoami').textContent = me.id;
+      $('#roleTag').textContent = me.role || '';
+      const canManageUsers = !!(me.perms && me.perms.manageUsers);
+      document.getElementById('toggleUsers').style.display = canManageUsers ? '' : 'none';
+
+      // Enable/disable product form based on perms
+      const form = $('#productForm');
+      const canAdd = me.perms?.add; const canEdit = me.perms?.edit; const canRemove = me.perms?.remove;
+      // We don't disable fields for simplicity, perms are enforced when performing actions
+      renderProductsTable();
+      renderUsersTable();
+    }
+
+    // ----------------------------
+    // Product CRUD
+    // ----------------------------
+    function newId(){ return Math.random().toString(36).slice(2,10); }
+
+    function saveProductFromForm(){
+      const me = getCurrent();
+      if(!me || !me.perms || (!me.perms.add && !me.perms.edit)) return notify('You do not have permission.');
+      const id = $('#pId').value || newId();
+      const item = {
+        id,
+        title: $('#pTitle').value.trim(),
+        price: Number($('#pPrice').value || 0),
+        img: $('#pImg').value.trim(),
+        desc: $('#pDesc').value.trim()
+      };
+      if(!item.title){ notify('Title is required.'); return; }
+      const items = loadProducts();
+      const idx = items.findIndex(x=>x.id===id);
+      if(idx>=0){
+        if(!me.perms.edit) return notify('No permission to edit.');
+        items[idx] = item;
+        notify('Product updated.');
+      } else {
+        if(!me.perms.add) return notify('No permission to add.');
+        items.push(item);
+        notify('Product added.');
+      }
+      saveProducts(items);
+      renderProducts();
+      renderProductsTable();
+      $('#productForm').reset(); $('#pId').value='';
+    }
+
+    function startEditProduct(id){
+      const me = getCurrent(); if(!me?.perms?.edit) return notify('No permission to edit.');
+      const p = loadProducts().find(x=>x.id===id); if(!p) return;
+      $('#pId').value = p.id;
+      $('#pTitle').value = p.title;
+      $('#pPrice').value = p.price;
+      $('#pImg').value = p.img || '';
+      $('#pDesc').value = p.desc || '';
+      window.scrollTo({ top: document.getElementById('productsPanel').offsetTop - 80, behavior:'smooth' });
+    }
+
+    function removeProduct(id){
+      const me = getCurrent(); if(!me?.perms?.remove) return notify('No permission to remove.');
+      if(!confirm('Remove this product?')) return;
+      const items = loadProducts().filter(x=>x.id!==id);
+      saveProducts(items);
+      renderProducts();
+      renderProductsTable();
+      notify('Removed.');
+    }
+
+    // ----------------------------
+    // Accounts management
+    // ----------------------------
+    function saveUserFromForm(){
+      const me = getCurrent(); if(!me?.perms?.manageUsers) return notify('No permission to manage users.');
+      const id = $('#uId').value.trim(); if(!id){ notify('ID required'); return; }
+      const role = $('#uRole').value.trim() || 'staff';
+      const perms = {
+        add: $('#permAdd').checked,
+        edit: $('#permEdit').checked,
+        remove: $('#permRemove').checked,
+        manageUsers: $('#permManageUsers').checked
+      };
+      const acc = loadAccounts();
+      acc[id] = { role, perms };
+      saveAccounts(acc);
+      renderUsersTable();
+      notify('Account saved.');
+      $('#userForm').reset();
+    }
+
+    function startEditUser(id){
+      const acc = loadAccounts(); const u = acc[id]; if(!u) return;
+      $('#uId').value = id;
+      $('#uRole').value = u.role || '';
+      $('#permAdd').checked = !!u.perms?.add;
+      $('#permEdit').checked = !!u.perms?.edit;
+      $('#permRemove').checked = !!u.perms?.remove;
+      $('#permManageUsers').checked = !!u.perms?.manageUsers;
+      window.scrollTo({ top: document.getElementById('usersPanel').offsetTop - 80, behavior:'smooth' });
+    }
+
+    function removeUser(id){
+      const me = getCurrent(); if(!me?.perms?.manageUsers) return notify('No permission to manage users.');
+      if(id === DEFAULT_OWNER_ID){ return notify('Cannot remove default owner ID directly. Create a new owner and remove later by editing code if you really wish.'); }
+      if(!confirm('Remove this account?')) return;
+      const acc = loadAccounts();
+      delete acc[id];
+      saveAccounts(acc);
+      renderUsersTable();
+      notify('Account removed.');
+    }
+
+    // ----------------------------
+    // Login
+    // ----------------------------
+    let loginMode = 'user'; // or 'owner' (visual only; both use same ID list)
+
+    function openLogin(mode){
+      loginMode = mode || 'user';
+      $('#loginTitle').textContent = loginMode === 'owner' ? 'Owner / Staff Login' : 'User Login';
+      $('#loginModal').style.display='flex';
+      setTimeout(()=>$('#loginId').focus(), 0);
+    }
+    function closeLogin(){ $('#loginModal').style.display='none'; }
+
+    function handleLoginSubmit(e){
+      e.preventDefault();
+      const id = $('#loginId').value.trim(); if(!id) return;
+      const acc = loadAccounts();
+      if(!acc[id]){ notify('Unknown ID. Ask the owner to add your account.'); return; }
+      setCurrent(id);
+      closeLogin();
+      updateAdminUI();
+      notify('Logged in.');
+      showPanel('products');
+      document.getElementById('productsPanel').style.display='';
+      window.scrollTo({ top: document.getElementById('adminArea').offsetTop - 40, behavior:'smooth' });
+    }
+
+    function logout(){ setCurrent(null); updateAdminUI(); notify('Logged out.'); }
+
+    // ----------------------------
+    // Wire up events
+    // ----------------------------
+    document.getElementById('ownerLoginBtn').addEventListener('click', ()=> openLogin('owner'));
+    document.getElementById('userLoginBtn').addEventListener('click', ()=> openLogin('user'));
+    document.getElementById('closeLogin').addEventListener('click', closeLogin);
+    document.getElementById('loginModal').addEventListener('click', (e)=>{ if(e.target.id==='loginModal') closeLogin(); });
+    document.getElementById('loginForm').addEventListener('submit', handleLoginSubmit);
+
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('toggleProducts').addEventListener('click', ()=> showPanel('products'));
+    document.getElementById('toggleUsers').addEventListener('click', ()=> showPanel('users'));
+
+    document.getElementById('productForm').addEventListener('submit', (e)=>{ e.preventDefault(); saveProductFromForm(); });
+    document.getElementById('resetForm').addEventListener('click', ()=>{ $('#productForm').reset(); $('#pId').value=''; });
+    document.getElementById('userForm').addEventListener('submit', (e)=>{ e.preventDefault(); saveUserFromForm(); });
+    document.getElementById('resetUserForm').addEventListener('click', ()=>{ $('#userForm').reset(); });
+
+    document.getElementById('searchInput').addEventListener('input', ()=> renderProducts());
+
+    // Seed demo data once (only if no products yet)
+    (function seed(){
+      const items = loadProducts();
+      if(items.length===0){
+        const demo = [
+          { id:newId(), title:'Vintage Denim Jacket', price:65, img:'', desc:'Classic fit, good condition.'},
+          { id:newId(), title:'PS5 Controller (New)', price:75, img:'', desc:'Factory sealed.'},
+          { id:newId(), title:'AirPods Pro (2nd Gen)', price:180, img:'', desc:'Lightly used, includes case.'}
+        ];
+        saveProducts(demo);
+      }
+    })();
+
+    // Initial render
+    renderProducts();
+    updateAdminUI();
+  </script>
+</body>
+</html>
