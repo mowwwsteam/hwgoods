@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Harringtons Reselling</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
 :root{--bg:#ffffff;--bg-soft:#fff7f9;--accent:#ffccd6;--accent-2:#ffd9e0;--text:#222;--muted:#666;--radius:18px;--shadow:0 8px 24px rgba(255,160,180,0.25)}
 *{box-sizing:border-box}
@@ -32,6 +37,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--accent-2);padding:20
 </style>
 </head>
 <body>
+
 <header>
 <div class="brand"><div class="logo"></div><h1>Harringtons Reselling</h1></div>
 <div>
@@ -40,6 +46,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--accent-2);padding:20
 <button class="btn" id="businessInfoBtn" style="display:none">Business Info</button>
 </div>
 </header>
+
 <main id="mainContent">
 <section id="welcomeSection">
 <h2>Welcome to Harringtons Reselling</h2>
@@ -123,62 +130,135 @@ footer{background:var(--bg-soft);border-top:1px solid var(--accent-2);padding:20
 </div>
 
 <script>
-const LS_KEY='hr_products',USERS_KEY='hr_users',OWNER_ID='4811042012';
+// Firebase config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Current user
+const OWNER_ID='4811042012';
 let currentUserRole = null; // 'owner' or 'user'
 
-function loadProducts(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[]}catch(e){return[]}}
-function saveProducts(items){localStorage.setItem(LS_KEY,JSON.stringify(items))}
-function loadUsers(){try{return JSON.parse(localStorage.getItem(USERS_KEY))||{}}catch(e){return{}}}
-function saveUsers(users){localStorage.setItem(USERS_KEY,JSON.stringify(users))}
+// --- DATABASE FUNCTIONS ---
 
-function renderProducts(){
-const list=loadProducts(),grid=document.getElementById('productsGrid');grid.innerHTML='';
-if(list.length===0){grid.innerHTML='<div class="card">No products yet.</div>';return}
-list.forEach((p,i)=>{const c=document.createElement('div');c.className='card';
-c.innerHTML=`<img src="${p.img||''}" alt="${p.title}" onerror="this.style.display='none'"><div><strong>${p.title}</strong></div><div class="price">$${p.price.toFixed(2)}</div><div class="muted">${p.desc||''}</div>`;grid.appendChild(c)})
+async function loadProducts(){
+  const snapshot = await db.ref('products').get();
+  return snapshot.exists()?snapshot.val():[];
+}
+function saveProduct(product){
+  const newRef = db.ref('products').push();
+  newRef.set(product);
+}
+async function removeProduct(index){
+  const products = await loadProducts();
+  const keys = Object.keys(products);
+  if(keys[index]) db.ref('products/' + keys[index]).remove();
 }
 
-function renderOwnerProductList(){
-const list=loadProducts();const ownerProductList=document.getElementById('ownerProductList');ownerProductList.innerHTML='';
-if(list.length===0){ownerProductList.innerHTML='<div class="card">No products yet.</div>';return}
-list.forEach((p,i)=>{const c=document.createElement('div');c.className='card';
-c.innerHTML=`<div><strong>${p.title}</strong></div><div class="price">$${p.price.toFixed(2)}</div><div class="muted">${p.desc||''}</div><div class="actions"><button class='btn danger' data-index='${i}'>Remove</button></div>`;
-ownerProductList.appendChild(c)});
-ownerProductList.querySelectorAll('.btn.danger').forEach(btn=>{
-btn.addEventListener('click',function(){
-const index=parseInt(this.dataset.index),products=loadProducts();
-products.splice(index,1);saveProducts(products);renderProducts();renderOwnerProductList()
-})})
+async function loadUsers(){
+  const snapshot = await db.ref('users').get();
+  return snapshot.exists()?snapshot.val():{};
+}
+function saveUser(id, perm){db.ref('users/'+id).set({perm})}
+function removeUser(id){db.ref('users/'+id).remove()}
+
+// --- RENDER FUNCTIONS ---
+
+async function renderProducts(){
+  const products = await loadProducts();
+  const grid = document.getElementById('productsGrid'); grid.innerHTML='';
+  if(!products || Object.keys(products).length===0){grid.innerHTML='<div class="card">No products yet.</div>'; return}
+  for(const key in products){
+    const p = products[key];
+    const c = document.createElement('div'); c.className='card';
+    c.innerHTML=`<img src="${p.img||''}" alt="${p.title}" onerror="this.style.display='none'">
+      <div><strong>${p.title}</strong></div>
+      <div class="price">$${p.price.toFixed(2)}</div>
+      <div class="muted">${p.desc||''}</div>`;
+    grid.appendChild(c)
+  }
 }
 
-function renderUsers(){
-const users=loadUsers(),userListDiv=document.getElementById('userList');userListDiv.innerHTML='';
-for(const id in users){const div=document.createElement('div');div.textContent=`ID: ${id}, Permission: ${users[id]?.perm || 'none'}`;userListDiv.appendChild(div)}
+async function renderOwnerProductList(){
+  const products = await loadProducts();
+  const ownerProductList=document.getElementById('ownerProductList'); ownerProductList.innerHTML='';
+  if(!products || Object.keys(products).length===0){ownerProductList.innerHTML='<div class="card">No products yet.</div>'; return}
+  const keys = Object.keys(products);
+  keys.forEach((key,i)=>{
+    const p = products[key];
+    const c = document.createElement('div'); c.className='card';
+    c.innerHTML=`<div><strong>${p.title}</strong></div>
+      <div class="price">$${p.price.toFixed(2)}</div>
+      <div class="muted">${p.desc||''}</div>
+      <div class="actions"><button class='btn danger' data-key='${key}'>Remove</button></div>`;
+    ownerProductList.appendChild(c)
+  });
+  ownerProductList.querySelectorAll('.btn.danger').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      const key = this.dataset.key;
+      db.ref('products/' + key).remove().then(()=>{renderProducts(); renderOwnerProductList();});
+    })
+  })
 }
 
-function renderUserActions(user){
-if(!user || !user.perm)return;
-const list=loadProducts(),userActions=document.getElementById('userActions');userActions.innerHTML='';
-if(user.perm.includes('add')){
-userActions.innerHTML+=`<h3>Add Product</h3><input id='userProductTitle' placeholder='Title'><input id='userProductPrice' type='number' placeholder='Price'><input id='userProductDesc' placeholder='Description'><input id='userProductImg' placeholder='Image URL'><button class='btn' id='userAddProductBtn'>Add Product</button>`;
-document.getElementById('userAddProductBtn').addEventListener('click',()=>{
-const title=document.getElementById('userProductTitle').value,price=parseFloat(document.getElementById('userProductPrice').value),desc=document.getElementById('userProductDesc').value,img=document.getElementById('userProductImg').value,products=loadProducts();
-products.push({title,price,desc,img});saveProducts(products);renderProducts();renderOwnerProductList();renderUserActions(user)
-})}
-if(user.perm.includes('remove')){
-userActions.innerHTML+=`<h3>Remove Products</h3><div id='userRemoveList' class='grid'></div>`;
-const userRemoveList=document.getElementById('userRemoveList');const products=loadProducts();
-products.forEach((p,i)=>{const c=document.createElement('div');c.className='card';
-c.innerHTML=`<div><strong>${p.title}</strong></div><div class='price'>$${p.price.toFixed(2)}</div><div class='muted'>${p.desc||''}</div><div class='actions'><button class='btn danger' data-index='${i}'>Remove</button></div>`;
-userRemoveList.appendChild(c)});
-userRemoveList.querySelectorAll('.btn.danger').forEach(btn=>{
-btn.addEventListener('click',function(){
-const index=parseInt(this.dataset.index),products=loadProducts();
-products.splice(index,1);saveProducts(products);renderProducts();renderOwnerProductList();renderUserActions(user)
-})})
-}
+async function renderUsers(){
+  const users = await loadUsers();
+  const userListDiv=document.getElementById('userList'); userListDiv.innerHTML='';
+  for(const id in users){const div=document.createElement('div'); div.textContent=`ID: ${id}, Permission: ${users[id]?.perm || 'none'}`; userListDiv.appendChild(div)}
 }
 
+async function renderUserActions(user){
+  if(!user || !user.perm) return;
+  const userActions=document.getElementById('userActions'); userActions.innerHTML='';
+
+  if(user.perm.includes('add')){
+    userActions.innerHTML+=`<h3>Add Product</h3>
+      <input id='userProductTitle' placeholder='Title'>
+      <input id='userProductPrice' type='number' placeholder='Price'>
+      <input id='userProductDesc' placeholder='Description'>
+      <input id='userProductImg' placeholder='Image URL'>
+      <button class='btn' id='userAddProductBtn'>Add Product</button>`;
+    document.getElementById('userAddProductBtn').addEventListener('click', async ()=>{
+      const title=document.getElementById('userProductTitle').value,
+      price=parseFloat(document.getElementById('userProductPrice').value),
+      desc=document.getElementById('userProductDesc').value,
+      img=document.getElementById('userProductImg').value;
+      saveProduct({title,price,desc,img});
+      await renderProducts(); await renderOwnerProductList(); await renderUserActions(user);
+    })
+  }
+
+  if(user.perm.includes('remove')){
+    userActions.innerHTML+=`<h3>Remove Products</h3><div id='userRemoveList' class='grid'></div>`;
+    const products = await loadProducts(); const userRemoveList=document.getElementById('userRemoveList');
+    const keys = Object.keys(products);
+    keys.forEach((key,i)=>{
+      const p = products[key];
+      const c = document.createElement('div'); c.className='card';
+      c.innerHTML=`<div><strong>${p.title}</strong></div>
+        <div class='price'>$${p.price.toFixed(2)}</div>
+        <div class='muted'>${p.desc||''}</div>
+        <div class='actions'><button class='btn danger' data-key='${key}'>Remove</button></div>`;
+      userRemoveList.appendChild(c);
+    });
+    userRemoveList.querySelectorAll('.btn.danger').forEach(btn=>{
+      btn.addEventListener('click',function(){
+        const key = this.dataset.key;
+        db.ref('products/' + key).remove().then(()=>{renderProducts(); renderOwnerProductList(); renderUserActions(user);});
+      })
+    })
+  }
+}
+
+// --- LOGIN / LOGOUT ---
 const ownerLoginBtn=document.getElementById('ownerLoginBtn'),
 userLoginBtn=document.getElementById('userLoginBtn'),
 businessInfoBtn=document.getElementById('businessInfoBtn'),
@@ -203,41 +283,43 @@ function openUserLogin(){userLoginModal.style.display='flex'}
 function closeUserLogin(){userLoginModal.style.display='none'}
 
 function checkLogin(){
-const val=document.getElementById('ownerIdInput').value;
-if(val===OWNER_ID){
-currentUserRole='owner';
-closeLogin();
-welcomeSection.style.display='none';
-productsSection.style.display='none';
-ownerDashboard.style.display='block';
-businessInfoBtn.style.display='inline-block';
-renderOwnerProductList();renderUsers()
-}else alert('Invalid ID')
+  const val=document.getElementById('ownerIdInput').value;
+  if(val===OWNER_ID){
+    currentUserRole='owner';
+    closeLogin();
+    welcomeSection.style.display='none';
+    productsSection.style.display='none';
+    ownerDashboard.style.display='block';
+    businessInfoBtn.style.display='inline-block';
+    renderOwnerProductList(); renderUsers();
+  } else alert('Invalid ID')
 }
 
-function checkUserLogin(){
-const id=document.getElementById('userIdInput').value,users=loadUsers();
-if(users[id]){
-currentUserRole='user';
-closeUserLogin();
-welcomeSection.style.display='none';
-productsSection.style.display='none';
-userDashboard.style.display='block';
-businessInfoBtn.style.display='inline-block';
-renderUserActions(users[id])
-}else alert('Invalid User ID')
+async function checkUserLogin(){
+  const id=document.getElementById('userIdInput').value;
+  const users = await loadUsers();
+  if(users[id]){
+    currentUserRole='user';
+    closeUserLogin();
+    welcomeSection.style.display='none';
+    productsSection.style.display='none';
+    userDashboard.style.display='block';
+    businessInfoBtn.style.display='inline-block';
+    renderUserActions(users[id]);
+  } else alert('Invalid User ID')
 }
 
 function logout(){
-currentUserRole=null;
-welcomeSection.style.display='block';
-productsSection.style.display='block';
-ownerDashboard.style.display='none';
-userDashboard.style.display='none';
-businessInfoSection.style.display='none';
-businessInfoBtn.style.display='none';
+  currentUserRole=null;
+  welcomeSection.style.display='block';
+  productsSection.style.display='block';
+  ownerDashboard.style.display='none';
+  userDashboard.style.display='none';
+  businessInfoSection.style.display='none';
+  businessInfoBtn.style.display='none';
 }
 
+// --- EVENT LISTENERS ---
 ownerLoginBtn.addEventListener('click',openLogin);
 userLoginBtn.addEventListener('click',openUserLogin);
 ownerCancelBtn.addEventListener('click',closeLogin);
@@ -246,45 +328,46 @@ ownerSubmitBtn.addEventListener('click',checkLogin);
 userSubmitBtn.addEventListener('click',checkUserLogin);
 
 businessInfoBtn.addEventListener('click',()=>{
-businessInfoSection.style.display='block';
-ownerDashboard.style.display='none';
-userDashboard.style.display='none';
+  businessInfoSection.style.display='block';
+  ownerDashboard.style.display='none';
+  userDashboard.style.display='none';
 });
 
 infoBackBtn.addEventListener('click',()=>{
-businessInfoSection.style.display='none';
-if(currentUserRole==='owner') ownerDashboard.style.display='block';
-else if(currentUserRole==='user') userDashboard.style.display='block';
+  businessInfoSection.style.display='none';
+  if(currentUserRole==='owner') ownerDashboard.style.display='block';
+  else if(currentUserRole==='user') userDashboard.style.display='block';
 });
 
+// Add Product
 document.getElementById('addProductBtn').addEventListener('click',()=>{
-const title=document.getElementById('ownerProductTitle').value,
-price=parseFloat(document.getElementById('ownerProductPrice').value),
-desc=document.getElementById('ownerProductDesc').value,
-img=document.getElementById('ownerProductImg').value,
-products=loadProducts();
-products.push({title,price,desc,img});
-saveProducts(products);renderProducts();renderOwnerProductList()
+  const title=document.getElementById('ownerProductTitle').value,
+        price=parseFloat(document.getElementById('ownerProductPrice').value),
+        desc=document.getElementById('ownerProductDesc').value,
+        img=document.getElementById('ownerProductImg').value;
+  saveProduct({title,price,desc,img});
+  renderProducts(); renderOwnerProductList();
 });
 
+// Add User
 document.getElementById('addUserBtn').addEventListener('click',()=>{
-const id=document.getElementById('newUserId').value,
-perm=document.getElementById('newUserPerm').value,
-users=loadUsers();
-if(id.trim()&&perm){users[id]={perm};saveUsers(users);renderUsers();document.getElementById('newUserId').value='';document.getElementById('newUserPerm').value='add'}
+  const id=document.getElementById('newUserId').value,
+        perm=document.getElementById('newUserPerm').value;
+  if(id.trim() && perm){ saveUser(id,perm); document.getElementById('newUserId').value=''; document.getElementById('newUserPerm').value='add'; renderUsers(); }
 });
 
+// Remove User
 document.getElementById('removeUserBtn').addEventListener('click',()=>{
-const id=document.getElementById('removeUserId').value,
-users=loadUsers();
-if(users[id]){delete users[id];saveUsers(users);renderUsers();document.getElementById('removeUserId').value=''}
-else alert('User ID not found')
+  const id=document.getElementById('removeUserId').value;
+  removeUser(id).then(()=>{renderUsers(); document.getElementById('removeUserId').value='';});
 });
 
 ownerLogoutBtn.addEventListener('click',logout);
 userLogoutBtn.addEventListener('click',logout);
 
+// --- INITIAL LOAD ---
 renderProducts();
 </script>
+
 </body>
 </html>
